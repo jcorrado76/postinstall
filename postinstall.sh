@@ -12,12 +12,14 @@
 #### Configuration Section
 ################################################################################
 
-# Where is the base url or dir. Without / at the end
+# Where is the default base url or dir. Without / at the end
 # Filesystem directory: BASE="/Users/nils/Scripts/postinstall/base"
 # Web: BASE="https://raw.githubusercontent.com/Cyclenerd/postinstall/master/base"
+# Can be overwritten with -b <BASE> at runtime
 BASE="https://raw.githubusercontent.com/Cyclenerd/postinstall/master/base"
 
-# Type of installation
+# Default type of installation
+# Can be overwritten with -t <TYPE> at runtime
 TYPE="server"
 
 ################################################################################
@@ -59,7 +61,7 @@ function echo_equals() {
 	COUNTER=0
 	while [  $COUNTER -lt "$1" ]; do
 		printf '='
-		let COUNTER=COUNTER+1 
+		(( COUNTER=COUNTER+1 ))
 	done
 }
 
@@ -220,7 +222,7 @@ function check_if_root_or_die() {
 
 # check_travis() check travis (https://travis-ci.org/Cyclenerd/postinstall) environment
 function check_travis() {
-	if [ ! -z "$TRAVIS" ]; then
+	if [ -n "$TRAVIS" ]; then
 		MY_HOMEBREW_USER="travis"
 		export MY_HOMEBREW_USER
 		echo "!!! Travis CI detected. Behavior is somewhat different !!!" >>"$INSTALL_LOG"
@@ -290,7 +292,7 @@ function detect_operating_system() {
 		OPERATING_SYSTEM="SLACKWARE"
 	elif [ -f /etc/redhat-release ] || [ -f /etc/system-release-cpe ]; then
 		echo -e "\ntest -f /etc/redhat-release || test -f /etc/system-release-cpe" >>"$INSTALL_LOG"
-		echo_step_info "Red Hat / CentOS"
+		echo_step_info "Red Hat / Fedora / CentOS"
 		OPERATING_SYSTEM="REDHAT"
 	elif [ -f /etc/SUSE-brand ] || [ -f /etc/SuSE-brand ] || [ -f /etc/SuSE-release ] || [ -d /etc/susehelp.d ]; then
 		echo -e "\ntest -f /etc/SUSE-brand || test -f /etc/SuSE-brand || test -f /etc/SuSE-release || test -d /etc/susehelp.d" >>"$INSTALL_LOG"
@@ -310,6 +312,14 @@ function detect_operating_system() {
 		echo -e "\ntest OPERATING_SYSTEM_TYPE" >>"$INSTALL_LOG"
 		echo_step_info "OpenBSD"
 		OPERATING_SYSTEM="OPENBSD"
+	elif [ "$OPERATING_SYSTEM_TYPE" = "NetBSD" ]; then
+		echo -e "\ntest OPERATING_SYSTEM_TYPE" >>"$INSTALL_LOG"
+		echo_step_info "NetBSD"
+		OPERATING_SYSTEM="NETBSD"
+	elif [ "$OPERATING_SYSTEM_TYPE" = "OpenWRT" ]; then
+		echo -e "\ntest OPERATING_SYSTEM_TYPE" >>"$INSTALL_LOG"
+		echo_step_info "OpenWRT"
+		OPERATING_SYSTEM="OPENWRT"
 	elif [ "$OPERATING_SYSTEM_TYPE" = "Cygwin" ]; then
 		echo -e "\ntest OPERATING_SYSTEM_TYPE" >>"$INSTALL_LOG"
 		echo_step_info "Cygwin"
@@ -322,6 +332,14 @@ function detect_operating_system() {
 		echo -e "\ntest -d /data/data/com.termux/files/home" >>"$INSTALL_LOG"
 		echo_step_info "Termux"
 		OPERATING_SYSTEM="TERMUX"
+	elif [ -f /etc/alpine-release ]; then
+		echo -e "\ntest -f /etc/alpine-release " >>"$INSTALL_LOG"
+		echo_step_info "Alpine Linux"
+		OPERATING_SYSTEM="ALPINE"
+	elif grep -lqs ^Mageia$ /etc/release; then
+	    	echo -e "\ntest -f /etc/release " >>"$INSTALL_LOG"
+	    	echo_step_info "Mageia"
+		OPERATING_SYSTEM="MAGEIA"
 	else
 		{
 			echo -e "\ntest -f /etc/debian_version"
@@ -330,7 +348,8 @@ function detect_operating_system() {
 			echo -e "\ntest -f /etc/SUSE-brand || test -f /etc/SuSE-brand || test -f /etc/SuSE-release"
 			echo -e "\ntest -f /System/Library/CoreServices/SystemVersion.plist"
 			echo -e "\ntest OPERATING_SYSTEM_TYPE" 
-			echo -e "\ntest -d /data/data/com.termux/files/home" 
+			echo -e "\ntest -d /data/data/com.termux/files/home"
+
 		} >>"$INSTALL_LOG"
 		exit_with_failure "Unsupported operating system"
 	fi
@@ -425,6 +444,26 @@ function detect_installer() {
 				exit_with_failure "Command 'pkg_add' not found"
 			fi
 			;;
+		NETBSD)
+			# https://www.netbsd.org/docs/pkgsrc/using.html#installing-binary-packages
+			if command_exists pkg_add; then
+				echo -e "\npkg_add found" >>"$INSTALL_LOG"
+				export MY_INSTALLER="pkg_add"
+				export MY_INSTALL="-I"
+			else
+				exit_with_failure "Command 'pkg_add' not found"
+			fi
+			;;
+		OPENWRT)
+			# https://wiki.openwrt.org/doc/packages
+			if command_exists opkg; then
+				echo -e "\nopkg found" >>"$INSTALL_LOG"
+				export MY_INSTALLER="opkg"
+				export MY_INSTALL="install"
+			else
+				exit_with_failure "Command 'opkg' not found"
+			fi
+			;;
 		HAIKU)
 			# https://www.haiku-os.org/guides/daily-tasks/updating-system/
 			if command_exists pkgman; then
@@ -444,6 +483,16 @@ function detect_installer() {
 				export MY_INSTALL="install -y"
 			else
 				exit_with_failure "Command 'pkg' not found"
+			fi
+			;;
+		ALPINE)
+			# https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management
+			if command_exists apk; then
+				echo -e "\apk found" >>"$INSTALL_LOG"
+				export MY_INSTALLER="apk"
+				export MY_INSTALL="add"
+			else
+				exit_with_failure "Command 'apk' not found"
 			fi
 			;;
 		CYGWIN)
@@ -490,6 +539,16 @@ function detect_installer() {
 				xcodebuild -license accept >>"$INSTALL_LOG" 2>&1
 			else
 				exit_with_failure "XCode not found. Install the latest XCode from the AppStore."
+			fi
+			;;
+		MAGEIA)
+			# https://wiki.mageia.org/en/Installing_and_removing_software
+			if command_exists urpmi; then
+				echo -e "\nurpmi found" >>"$INSTALL_LOG"
+				export MY_INSTALLER="urpmi"
+				export MY_INSTALL="--force"
+			else
+				exit_with_failure "Command 'urpmi' not found"
 			fi
 			;;
 	esac
@@ -598,6 +657,22 @@ function resync_installer() {
 			$MY_INSTALLER -UuI >>"$INSTALL_LOG" 2>&1
 			if [ "$?" -ne 0 ]; then
 				exit_with_failure "Failed to do $MY_INSTALLER update"
+			fi
+			;;
+		apk)
+			$MY_INSTALLER update >>"$INSTALL_LOG" 2>&1
+			if [ "$?" -ne 0 ]; then
+				exit_with_failure "Failed to do $MY_INSTALLER update"
+			fi
+			$MY_INSTALLER upgrade >>"$INSTALL_LOG" 2>&1
+			if [ "$?" -ne 0 ]; then
+				exit_with_failure "Failed to do $MY_INSTALLER upgrade"
+			fi
+			;;
+		urpmi)
+			$MY_INSTALLER --auto-update --force >>"$INSTALL_LOG" 2>&1
+			if [ "$?" -ne 0 ]; then
+				exit_with_failure "Failed to do $MY_INSTALLER upgrade"
 			fi
 			;;
 	esac

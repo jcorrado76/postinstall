@@ -11,6 +11,7 @@ Helps to install packages on different operating systems.
 ![Debian](https://www.nkn-it.de/img/distro/logos/debian.png)
 ![Fedora](https://www.nkn-it.de/img/distro/logos/fedora.png)
 ![FreeBSD](https://www.nkn-it.de/img/distro/logos/freebsd.png)
+![Mageia](https://www.nkn-it.de/img/distro/logos/mageia.png)
 ![OpenBSD](https://www.nkn-it.de/img/distro/logos/openbsd.png)
 ![Red Hat](https://www.nkn-it.de/img/distro/logos/redhat.png)
 ![SUSE](https://www.nkn-it.de/img/distro/logos/opensuse.png)
@@ -18,6 +19,7 @@ Helps to install packages on different operating systems.
 ![Ubuntu](https://www.nkn-it.de/img/distro/logos/ubuntu.png)
 ![Android](https://www.nkn-it.de/img/distro/logos/android.png)
 ![Termux](https://www.nkn-it.de/img/distro/logos/termux.png)
+![Alpine Linux](https://www.nkn-it.de/img/distro/logos/alpine.png)
 
 Cygwin and Haiku are also supported.
 
@@ -78,13 +80,17 @@ Example: `postinstall.sh` or `postinstall.sh -t workstation`
 
 Only `bash`, `curl`, `tput` (`ncurses-utils`) and a package manager for the respective operating system:
 
+* Alpine Linux              → `apk`
 * Apple macOS               → `port` or `brew`
 * Arch Linux                → `pacman`
 * Cygwin                    → `apt-cyg`
 * Debian / Ubuntu           → `apt-get`
 * FreeBSD                   → `pkg`
 * Haiku                     → `pkgman`
+* Mageia                    → `urpmi`
+* NetBSD                    → `pkg_add`
 * OpenBSD                   → `pkg_add`
+* OpenWRT                   → `opkg`
 * Red Hat / Fedora / CentOS → `dnf` or `yum`
 * Slackware                 → `slackpkg`
 * SUSE / openSUSE           → `zypper`
@@ -94,7 +100,7 @@ Only `bash`, `curl`, `tput` (`ncurses-utils`) and a package manager for the resp
 ## TODO
 
 * More and better documentation
-* Support for even more operating systems (NetBSD, Gentoo Linux) and package managers
+* Support for even more operating systems and package managers
 
 Help is welcome 👍
 
